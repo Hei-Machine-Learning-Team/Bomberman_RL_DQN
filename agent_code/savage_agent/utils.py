@@ -8,6 +8,23 @@ MIN_TRAINING_SIZE = 500
 TRAINING_BATCH_SIZE = 32
 MODEL_NAME = "savage-RNN"
 
+game_rewards_table = {
+        events.COIN_COLLECTED: 10,
+        events.KILLED_OPPONENT: 50,
+        events.GOT_KILLED: -100,
+        events.KILLED_SELF: -100,
+        events.CRATE_DESTROYED: 1,
+        events.SURVIVED_ROUND: 10
+    }
+
+
+def reward_from_events(event_list):
+    reward = 0
+    for event in event_list:
+        if event in game_rewards_table:
+            reward += game_rewards_table[event]
+    return reward
+
 
 def get_state_matrix(state):
     """
