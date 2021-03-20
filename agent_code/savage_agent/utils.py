@@ -3,7 +3,7 @@ import os
 import events
 
 ACTION_NUM = 6
-TRANSITION_MAX_LEN = 5_000
+TRANSITION_MAX_LEN = 1000
 MIN_TRAINING_SIZE = 500
 TRAINING_BATCH_SIZE = 32
 UPDATE_ROUNDS_NUM = 5
@@ -34,11 +34,11 @@ index2action = {
 game_rewards_table = {
         events.COIN_COLLECTED: 10,
         events.KILLED_OPPONENT: 50,
-        events.GOT_KILLED: -100,
-        events.KILLED_SELF: -100,
+        events.GOT_KILLED: -50,
+        events.KILLED_SELF: -60,
         events.CRATE_DESTROYED: 1,
-        events.SURVIVED_ROUND: 10,
-        events.INVALID_ACTION: -1
+        events.SURVIVED_ROUND: 2,
+        events.OPPONENT_ELIMINATED: 5
     }
 
 
@@ -48,6 +48,22 @@ def reward_from_events(event_list):
         if event in game_rewards_table:
             reward += game_rewards_table[event]
     return reward
+
+
+def get_possible_actions(state_matrix, player_position, bomb_left):
+    possible_actions = ['WAIT']
+    if bomb_left:
+        possible_actions.append("BOMB")
+    x, y = player_position
+    if state_matrix[(x, y-1)] == 4:
+        possible_actions.append("UP")
+    if state_matrix[(x, y+1)] == 4:
+        possible_actions.append("DOWN")
+    if state_matrix[(x-1, y)] == 4:
+        possible_actions.append("LEFT")
+    if state_matrix[(x+1, y)] == 4:
+        possible_actions.append("RIGHT")
+    return possible_actions
 
 
 def get_state_matrix(state):
@@ -132,7 +148,7 @@ class ModifiedTensorBoard(tf.keras.callbacks.TensorBoard):
 
 def create_model():
     model = tf.keras.models.Sequential([
-        tf.keras.layers.Flatten(),
+        tf.keras.Input(shape=289),
         tf.keras.layers.Dense(200),
         tf.keras.layers.Reshape((1, 200)),
         tf.keras.layers.SimpleRNN(120, return_sequences=True),

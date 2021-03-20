@@ -15,18 +15,18 @@ def setup_training(self):
 
 
 def game_events_occurred(self, old_game_state, self_action, new_game_state, events):
-    if old_game_state is None:
-        return
     update_transitions(self, old_game_state, self_action, new_game_state, events)
     train(self, is_final=False)
 
 
 def end_of_round(self, last_game_state, last_action, events):
-    train(self, is_final=False)
-    print("round:", last_game_state['round'], "step:", last_game_state['step'], "score:", last_game_state['self'][1])
+    train(self, is_final=True)
+    print("round:", last_game_state['round'], "step:", last_game_state['step'], "score:", last_game_state['self'][1], "e:", self.epsilon)
 
 
 def update_transitions(self, old_game_state, self_action, new_game_state, events):
+    if old_game_state is None or self_action is None or new_game_state is None:
+        return
     reward = utils.reward_from_events(events)
     old_state_matrix = utils.get_state_matrix(old_game_state)
     new_state_matrix = utils.get_state_matrix(new_game_state)
@@ -37,10 +37,10 @@ def train(self, is_final):
     if len(self.transitions) < utils.MIN_TRAINING_SIZE:
         return
     training_batch = random.sample(self.transitions, utils.TRAINING_BATCH_SIZE)
-    old_state_matrices = np.array([transition[0] for transition in training_batch])
+    old_state_matrices = np.array([transition[0].flatten() for transition in training_batch])
     old_qs_list = self.model.predict(old_state_matrices)
 
-    new_state_matrices = np.array([transition[3] for transition in training_batch])
+    new_state_matrices = np.array([transition[2].flatten() for transition in training_batch])
     new_qs_list = self.target_model.predict(new_state_matrices)
 
     x_train = []
@@ -51,18 +51,23 @@ def train(self, is_final):
         new_q = reward + utils.DISCOUNT * max_new_q
 
         old_qs = old_qs_list[index]
+        if action not in utils.action2index:
+            print(action)
         act_idx = utils.action2index[action]
         old_qs[act_idx] = new_q
 
-        x_train.append(old_state_matrix)
+        x_train.append(old_state_matrix.flatten())
         y_train.append(old_qs)
 
-    if is_final:
-        self.model.fit(np.array(x_train), np.array(y_train), batch_size=utils.TRAINING_BATCH_SIZE,
-                       verbose=0, shuffle=False, callbacks=[self.tensorboard])
-    else:
-        self.model.fit(np.array(x_train), np.array(y_train), batch_size=utils.TRAINING_BATCH_SIZE,
-                       verbose=0, shuffle=False)
+    # if is_final:
+    #     self.model.fit(np.array(x_train), np.array(y_train), batch_size=utils.TRAINING_BATCH_SIZE,
+    #                    verbose=0, shuffle=False, callbacks=[self.tensorboard])
+    # else:
+    #     self.model.fit(np.array(x_train), np.array(y_train), batch_size=utils.TRAINING_BATCH_SIZE,
+    #                    verbose=0, shuffle=False)
+
+    self.model.fit(np.array(x_train), np.array(y_train), batch_size=utils.TRAINING_BATCH_SIZE,
+                   verbose=0, shuffle=False)
 
     if is_final:
         self.round_num += 1

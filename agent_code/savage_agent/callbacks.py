@@ -17,11 +17,19 @@ def setup(self):
 def act(self, game_state: dict) -> str:
     # print("act called")
     # print("epsilon:", self.epsilon)
+    state_matrix = utils.get_state_matrix(game_state)
+    possible_actions = utils.get_possible_actions(state_matrix, game_state['self'][3], game_state['self'][2])
     if np.random.random() <= self.epsilon:
-        act_idx = np.random.randint(0, len(utils.ACTION_SPACE))
+        # chose actions randomly
+        action = np.random.choice(possible_actions)
     else:
-        state_matrix = utils.get_state_matrix(game_state)
-        act_idx = np.argmax(self.model.predict(state_matrix))
-    action = utils.index2action[act_idx]
+        for idx in np.sort(self.model.predict(state_matrix.flatten()))[::-1]:
+            if utils.index2action[idx] in possible_actions:
+                action = utils.index2action[idx]
+                break
     # print("action:", action)
+    if action is None:
+        print("action is None")
+        print(possible_actions)
+        print(np.sort(self.model.predict(state_matrix.flatten()))[::-1])
     return action
