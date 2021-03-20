@@ -1,8 +1,12 @@
 import tensorflow as tf
 import os
+import events
 
 ACTION_NUM = 6
-MODEL_NAME = "2*256"
+TRANSITION_MAX_LEN = 5_000
+MIN_TRAINING_SIZE = 500
+TRAINING_BATCH_SIZE = 32
+MODEL_NAME = "savage-RNN"
 
 
 def get_state_matrix(state):
