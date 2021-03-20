@@ -3,7 +3,7 @@ import pickle
 import random
 
 import numpy as np
-import utils
+from agent_code.savage_agent import utils
 from collections import deque
 
 
@@ -15,6 +15,13 @@ def setup(self):
 
 
 def act(self, game_state: dict) -> str:
-    state_matrix = utils.get_state_matrix(game_state)
-    act_idx = np.argmax(self.model.predict(state_matrix))
-    return utils.index2action[act_idx]
+    # print("act called")
+    # print("epsilon:", self.epsilon)
+    if np.random.random() <= self.epsilon:
+        act_idx = np.random.randint(0, len(utils.ACTION_SPACE))
+    else:
+        state_matrix = utils.get_state_matrix(game_state)
+        act_idx = np.argmax(self.model.predict(state_matrix))
+    action = utils.index2action[act_idx]
+    # print("action:", action)
+    return action

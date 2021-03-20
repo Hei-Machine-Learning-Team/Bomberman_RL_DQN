@@ -1,4 +1,4 @@
-import utils
+from agent_code.savage_agent import utils
 from collections import deque
 import time
 import random
@@ -11,18 +11,22 @@ def setup_training(self):
     self.transitions = deque(maxlen=utils.TRANSITION_MAX_LEN)
     self.tensorboard = utils.ModifiedTensorBoard(log_dir=f"logs/{utils.MODEL_NAME}-{int(time.time())}")
     self.round_num = 0
+    self.epsilon = 1
 
 
-def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: list[str]):
-    self.update_transitions(old_game_state, self_action, new_game_state, events)
-    self.train(is_final=False)
+def game_events_occurred(self, old_game_state, self_action, new_game_state, events):
+    if old_game_state is None:
+        return
+    update_transitions(self, old_game_state, self_action, new_game_state, events)
+    train(self, is_final=False)
 
 
-def end_of_round(self, last_game_state: dict, last_action: str, events: list[str]):
-    self.train(is_final=False)
+def end_of_round(self, last_game_state, last_action, events):
+    train(self, is_final=False)
+    print("round:", last_game_state['round'], "step:", last_game_state['step'], "score:", last_game_state['self'][1])
 
 
-def update_transitions(self, old_game_state: dict, self_action: str, new_game_state: dict, events: list[str]):
+def update_transitions(self, old_game_state, self_action, new_game_state, events):
     reward = utils.reward_from_events(events)
     old_state_matrix = utils.get_state_matrix(old_game_state)
     new_state_matrix = utils.get_state_matrix(new_game_state)
@@ -42,7 +46,7 @@ def train(self, is_final):
     x_train = []
     y_train = []
 
-    for index, (old_state_matrix, action, new_state_matrix, reward, done) in enumerate(training_batch):
+    for index, (old_state_matrix, action, new_state_matrix, reward) in enumerate(training_batch):
         max_new_q = np.max(new_qs_list[index])
         new_q = reward + utils.DISCOUNT * max_new_q
 
@@ -66,4 +70,8 @@ def train(self, is_final):
         if self.round_num > utils.UPDATE_ROUNDS_NUM:
             self.target_model.set_weights(self.model.get_weights())
             self.round_num = 0
+
+        if self.epsilon > utils.MIN_EPSILON:
+            self.epsilon *= utils.EPSILON_DECAY
+            self.epsilon = max(utils.MIN_EPSILON, self.epsilon)
 

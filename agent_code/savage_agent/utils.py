@@ -8,9 +8,12 @@ MIN_TRAINING_SIZE = 500
 TRAINING_BATCH_SIZE = 32
 UPDATE_ROUNDS_NUM = 5
 DISCOUNT = 0.9
+EPSILON_DECAY = 0.9975
+MIN_EPSILON = 0.0001
+
 MODEL_NAME = "savage-RNN"
 
-ACTION_SPACE = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'BOMB', 'WAIT']
+ACTION_SPACE = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
 action2index = {
     'UP': 0,
     'DOWN': 1,
@@ -54,6 +57,8 @@ def get_state_matrix(state):
     0 -> player,  1 -> enemies,  2 -> crates,  3 -> walls
     4 -> tiles,   5 -> bombs,    6 -> coins,   7 -> explosion
     """
+    if state is None:
+        return None
     player_position = state['self'][3]
     enemy_positions = [player_state[3] for player_state in state['others']]
     field = state['field']
@@ -68,8 +73,8 @@ def get_state_matrix(state):
         field[pos] = 5
     for pos in coin_positions:
         field[pos] = 6
-    for i in field.shape[0]:
-        for j in field.shape[1]:
+    for i in range(field.shape[0]):
+        for j in range(field.shape[1]):
             if field[i][j] == -1:  # walls
                 field[i][j] = 3
                 continue
@@ -129,6 +134,7 @@ def create_model():
     model = tf.keras.models.Sequential([
         tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(200),
+        tf.keras.layers.Reshape((1, 200)),
         tf.keras.layers.SimpleRNN(120, return_sequences=True),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.SimpleRNN(120, return_sequences=False),
