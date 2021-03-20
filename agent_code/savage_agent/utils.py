@@ -6,7 +6,27 @@ ACTION_NUM = 6
 TRANSITION_MAX_LEN = 5_000
 MIN_TRAINING_SIZE = 500
 TRAINING_BATCH_SIZE = 32
+UPDATE_ROUNDS_NUM = 5
+DISCOUNT = 0.9
 MODEL_NAME = "savage-RNN"
+
+ACTION_SPACE = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'BOMB', 'WAIT']
+action2index = {
+    'UP': 0,
+    'DOWN': 1,
+    'LEFT': 2,
+    'RIGHT': 3,
+    'BOMB': 4,
+    'WAIT': 5
+}
+index2action = {
+    0: 'UP',
+    1: 'DOWN',
+    2: 'LEFT',
+    3: 'RIGHT',
+    4: 'BOMB',
+    5: 'WAIT'
+}
 
 game_rewards_table = {
         events.COIN_COLLECTED: 10,
@@ -14,7 +34,8 @@ game_rewards_table = {
         events.GOT_KILLED: -100,
         events.KILLED_SELF: -100,
         events.CRATE_DESTROYED: 1,
-        events.SURVIVED_ROUND: 10
+        events.SURVIVED_ROUND: 10,
+        events.INVALID_ACTION: -1
     }
 
 
@@ -107,12 +128,11 @@ class ModifiedTensorBoard(tf.keras.callbacks.TensorBoard):
 def create_model():
     model = tf.keras.models.Sequential([
         tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(200),
         tf.keras.layers.SimpleRNN(120, return_sequences=True),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.SimpleRNN(120, return_sequences=False),
         tf.keras.layers.Dropout(0.2),
-
-        tf.keras.layers.Dense(64),
         tf.keras.layers.Dense(ACTION_NUM, activation='linear')
     ])
     model.compile(loss='mse', optimizer=tf.keras.optimizers.Adam(lr=0.001), metrics=['accuracy'])
