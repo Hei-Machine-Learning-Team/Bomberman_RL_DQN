@@ -6,7 +6,7 @@ import numpy as np
 from agent_code.savage_agent import utils
 from agent_code.rule_based_agent.callbacks import act as rule_based_act
 from agent_code.rule_based_agent.callbacks import setup as rule_based_setup
-
+import tensorflow as tf
 from collections import deque
 
 
@@ -14,9 +14,9 @@ ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
 
 
 def setup(self):
+    if utils.IMITATE:
+        imitate_setup(self)
     if self.train:  # on the training mode
-        if utils.IMITATE:
-            imitate_setup(self)
         self.model = utils.create_model()
         if utils.CONTINUE_CKPT:  # load model from checkpoint
             if os.path.exists(utils.check_point_save_path + '.index'):
@@ -24,6 +24,7 @@ def setup(self):
                 self.model.load_weights(utils.check_point_save_path)
     else:
         # todo: load model from files
+        self.model = tf.keras.models.load_model('./RNNModel')
         pass
 
 
@@ -59,7 +60,6 @@ def act(self, game_state: dict) -> str:
 
 def imitate_setup(self):
     rule_based_setup(self)
-
 
 def imitate_act(self, game_state):
     return rule_based_act(self, game_state)
