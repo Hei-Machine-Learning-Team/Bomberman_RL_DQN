@@ -23,8 +23,8 @@ def setup(self):
                 print('-------------load the model-----------------')
                 self.model.load_weights(utils.check_point_save_path)
     else:
-        # todo: load model from files
         self.model = tf.keras.models.load_model('./RNNModel')
+        print("load model on non-training mode")
         pass
 
 
@@ -45,21 +45,23 @@ def setup(self):
 
 
 def act(self, game_state: dict) -> str:
+    # print("act called")
     if utils.IMITATE:
         return imitate_act(self, game_state)
-    if np.random.random() <= self.epsilon:
-        # chose actions randomly
-        action = np.random.choice(utils.ACTION_SPACE)
-    else:
-        state_matrix = utils.get_state_matrix(game_state)
-        np.sort(self.model.predict(state_matrix.flatten() / 7))
-        act_idx = np.argmax(self.model.predict(state_matrix.flatten()/7))
-        action = utils.index2action(act_idx)
+    if self.train:
+        if np.random.random() <= self.epsilon:
+            # chose actions randomly
+            return np.random.choice(utils.ACTION_SPACE)
+    # chose actions based on q values
+    state_matrix = utils.get_state_matrix(game_state)
+    act_idx = np.argmax(self.model.predict(state_matrix.flatten() / 7))
+    action = utils.index2action(act_idx)
     return action
 
 
 def imitate_setup(self):
     rule_based_setup(self)
+
 
 def imitate_act(self, game_state):
     return rule_based_act(self, game_state)

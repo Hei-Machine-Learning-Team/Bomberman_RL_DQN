@@ -104,14 +104,6 @@ def get_state_matrix(state):
     bomb_positions = [bomb_state[0] for bomb_state in state['bombs']]
     coin_positions = [coin_pos for coin_pos in state['coins']]
     explosion = state['explosion_map']
-
-    field[player_position] = 0
-    for pos in enemy_positions:
-        field[pos] = 1
-    for pos in bomb_positions:
-        field[pos] = 5
-    for pos in coin_positions:
-        field[pos] = 6
     for i in range(field.shape[0]):
         for j in range(field.shape[1]):
             if field[i][j] == -1:  # walls
@@ -123,6 +115,13 @@ def get_state_matrix(state):
                 field[i][j] = 2
             if explosion[i][j] > 0:  # explosion
                 field[i][j] = 7
+    field[player_position] = 0
+    for pos in enemy_positions:
+        field[pos] = 1
+    for pos in bomb_positions:
+        field[pos] = 5
+    for pos in coin_positions:
+        field[pos] = 6
     return field
 
 

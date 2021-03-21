@@ -82,7 +82,8 @@ def train(self, is_final):
         callbacks.append(self.tensorboard)
     if self.round_num % utils.CHECKPOINT_ROUNDS_NUM == 0:
         callbacks.append(utils.cp_callbacks)
-        self.model.save('./RNNModel')
+        if self.round_num != 0:
+            self.model.save('./RNNModel')
 
     # print("train**********")
     # print(np.array(x_train)/7, np.array(y_train))
