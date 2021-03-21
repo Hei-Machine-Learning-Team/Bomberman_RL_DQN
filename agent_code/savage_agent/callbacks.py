@@ -4,6 +4,9 @@ import random
 
 import numpy as np
 from agent_code.savage_agent import utils
+from agent_code.rule_based_agent.callbacks import act as rule_based_act
+from agent_code.rule_based_agent.callbacks import setup as rule_based_setup
+
 from collections import deque
 
 
@@ -11,7 +14,17 @@ ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
 
 
 def setup(self):
-    pass
+    if self.train:  # on the training mode
+        if utils.IMITATE:
+            imitate_setup(self)
+        self.model = utils.create_model()
+        if utils.CONTINUE_CKPT:  # load model from checkpoint
+            if os.path.exists(utils.check_point_save_path + '.index'):
+                print('-------------load the model-----------------')
+                self.model.load_weights(utils.check_point_save_path)
+    else:
+        # todo: load model from files
+        pass
 
 
 # def act(self, game_state: dict) -> str:
@@ -31,6 +44,8 @@ def setup(self):
 
 
 def act(self, game_state: dict) -> str:
+    if utils.IMITATE:
+        return imitate_act(self, game_state)
     if np.random.random() <= self.epsilon:
         # chose actions randomly
         action = np.random.choice(utils.ACTION_SPACE)
@@ -40,3 +55,11 @@ def act(self, game_state: dict) -> str:
         act_idx = np.argmax(self.model.predict(state_matrix.flatten()/7))
         action = utils.index2action(act_idx)
     return action
+
+
+def imitate_setup(self):
+    rule_based_setup(self)
+
+
+def imitate_act(self, game_state):
+    return rule_based_act(self, game_state)

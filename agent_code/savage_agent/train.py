@@ -8,8 +8,8 @@ from settings import COLS, ROWS
 
 
 def setup_training(self):
-    self.model = utils.create_model()  # 非training 模式下需要变通
     self.target_model = utils.create_model()
+    self.target_model.set_weights(self.model.get_weights())
     self.transitions = deque(maxlen=utils.TRANSITION_MAX_LEN)
     self.tensorboard = utils.ModifiedTensorBoard(log_dir=f"logs/{utils.MODEL_NAME}-{int(time.time())}")
     self.round_num = 0

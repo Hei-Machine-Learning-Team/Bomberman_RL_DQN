@@ -16,6 +16,8 @@ MIN_EPSILON = 0.0001
 
 MODEL_NAME = "savage-RNN"
 
+IMITATE = True
+CONTINUE_CKPT = False
 check_point_save_path = "./checkpoint/rnn.ckpt"
 cp_callbacks = tf.keras.callbacks.ModelCheckpoint(filepath=check_point_save_path,
                                                   save_weights_only=True)
