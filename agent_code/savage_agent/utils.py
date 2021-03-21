@@ -150,7 +150,7 @@ def create_model():
     model = tf.keras.models.Sequential([
         tf.keras.Input(shape=289),
         tf.keras.layers.Dense(150),
-        tf.keras.layers.Reshape((1, 200)),
+        tf.keras.layers.Reshape((1, 150)),
         tf.keras.layers.SimpleRNN(20, return_sequences=True),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.SimpleRNN(10, return_sequences=False),
