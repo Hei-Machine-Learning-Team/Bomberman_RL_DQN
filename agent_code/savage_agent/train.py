@@ -12,6 +12,8 @@ def setup_training(self):
     self.target_model.set_weights(self.model.get_weights())
     self.transitions = deque(maxlen=utils.TRANSITION_MAX_LEN)
     self.tensorboard = utils.ModifiedTensorBoard(log_dir=f"logs/{utils.MODEL_NAME}-{int(time.time())}")
+    self.ep_rewards = []
+    self.round_reward = 0
     self.round_num = 0
     self.epsilon = 1
 
@@ -23,8 +25,15 @@ def game_events_occurred(self, old_game_state, self_action, new_game_state, even
 
 def end_of_round(self, last_game_state, last_action, events):
     update_transitions(self, last_game_state, last_action, None, events, done=True)
+    self.ep_rewards.append(self.round_reward)
+    self.round_reward = 0
+    if self.round_num % utils.AGGREGATE_STATS_EVERY == 0 and self.round_num != 0:
+        avg_reward = sum(self.ep_rewards[-utils.AGGREGATE_STATS_EVERY:])/len(self.ep_rewards[-utils.AGGREGATE_STATS_EVERY:])
+        min_reward = min(self.ep_rewards[-utils.AGGREGATE_STATS_EVERY:])
+        max_reward = max(self.ep_rewards[-utils.AGGREGATE_STATS_EVERY:])
+        self.tensorboard.update_stats(reward_avg=avg_reward, reward_min=min_reward, max_reward=max_reward)
     train(self, is_final=True)
-    # if e.KILLED_SELF in events or e.GOT_KILLED in events:
+    # if e.KILLED_SELF in events or e.GOT_KILLED in eveNnts:
     #     print("*************************************************")
     #     print(events)
     print("round:", last_game_state['round'], "step:", last_game_state['step'], "score:", last_game_state['self'][1], "e:", self.epsilon)
@@ -34,6 +43,7 @@ def update_transitions(self, old_game_state, self_action, new_game_state, events
     if old_game_state is None or self_action is None:
         return
     reward = utils.reward_from_events(events)
+    self.round_reward += reward
     # print("reward:", reward)
     # if reward == -1:
     #     print(events)

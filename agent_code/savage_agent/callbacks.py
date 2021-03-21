@@ -24,9 +24,8 @@ def setup(self):
                 self.model.load_weights(utils.check_point_save_path)
     else:
         self.model = tf.keras.models.load_model('./RNNModel')
+        print(self.model.summary())
         print("load model on non-training mode")
-        pass
-
 
 # def act(self, game_state: dict) -> str:
 #     # print("act called")
@@ -54,8 +53,12 @@ def act(self, game_state: dict) -> str:
             return np.random.choice(utils.ACTION_SPACE)
     # chose actions based on q values
     state_matrix = utils.get_state_matrix(game_state)
-    act_idx = np.argmax(self.model.predict(state_matrix.flatten() / 7))
-    action = utils.index2action(act_idx)
+    print(state_matrix)
+    print(self.model.predict(np.array([state_matrix.flatten()/7])))
+    act_idx = np.argmax(self.model.predict(np.array([state_matrix.flatten()/7])))
+    print(act_idx)
+    action = utils.ACTION_SPACE[act_idx]
+    print(action)
     return action
 
 
