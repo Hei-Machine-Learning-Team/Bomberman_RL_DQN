@@ -53,12 +53,12 @@ def act(self, game_state: dict) -> str:
             return np.random.choice(utils.ACTION_SPACE)
     # chose actions based on q values
     state_matrix = utils.get_state_matrix(game_state)
-    print(state_matrix)
-    print(self.model.predict(np.array([state_matrix.flatten()/7])))
+    # print(state_matrix)
+    # print(self.model.predict(np.array([state_matrix.flatten()/7])))
     act_idx = np.argmax(self.model.predict(np.array([state_matrix.flatten()/7])))
-    print(act_idx)
+    # print(act_idx)
     action = utils.ACTION_SPACE[act_idx]
-    print(action)
+    # print(action)
     return action
 
 

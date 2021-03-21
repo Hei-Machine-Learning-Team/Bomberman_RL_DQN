@@ -31,7 +31,7 @@ def end_of_round(self, last_game_state, last_action, events):
         avg_reward = sum(self.ep_rewards[-utils.AGGREGATE_STATS_EVERY:])/len(self.ep_rewards[-utils.AGGREGATE_STATS_EVERY:])
         min_reward = min(self.ep_rewards[-utils.AGGREGATE_STATS_EVERY:])
         max_reward = max(self.ep_rewards[-utils.AGGREGATE_STATS_EVERY:])
-        self.tensorboard.update_stats(reward_avg=avg_reward, reward_min=min_reward, max_reward=max_reward)
+        self.tensorboard.update_stats(reward_avg=avg_reward, reward_min=min_reward, max_reward=max_reward, epsilon=self.epsilon)
     train(self, is_final=True)
     # if e.KILLED_SELF in events or e.GOT_KILLED in eveNnts:
     #     print("*************************************************")
@@ -93,7 +93,7 @@ def train(self, is_final):
     if self.round_num % utils.CHECKPOINT_ROUNDS_NUM == 0:
         callbacks.append(utils.cp_callbacks)
         if self.round_num != 0:
-            self.model.save('./RNNModel')
+            self.model.save(f'./models/RNN-{int(time.time())}')
 
     # print("train**********")
     # print(np.array(x_train)/7, np.array(y_train))
