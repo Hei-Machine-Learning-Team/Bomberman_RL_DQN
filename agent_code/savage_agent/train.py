@@ -4,7 +4,7 @@ from collections import deque
 import time
 import random
 import numpy as np
-
+from settings import COLS, ROWS
 
 def setup_training(self):
     self.model = utils.create_model()  # 非training 模式下需要变通
@@ -34,7 +34,14 @@ def update_transitions(self, old_game_state, self_action, new_game_state, events
         return
     reward = utils.reward_from_events(events)
     old_state_matrix = utils.get_state_matrix(old_game_state)
-    new_state_matrix = utils.get_state_matrix(new_game_state)
+    # detect if the agent has performed invalid action
+    if utils.detect_invalid_action(old_state_matrix, old_game_state['self'][3], old_game_state['self'][2], self_action):
+        events.append(utils.INVALID_ACTION)
+    # if this transition is from the end of a round
+    if done or new_game_state is None:
+        new_state_matrix = np.zeros((COLS, ROWS))
+    else:
+        new_state_matrix = utils.get_state_matrix(new_game_state)
     self.transitions.append((old_state_matrix, self_action, new_state_matrix, reward, done))
 
 
@@ -45,6 +52,9 @@ def train(self, is_final):
     old_state_matrices = np.array([transition[0].flatten() for transition in training_batch])
     old_qs_list = self.model.predict(old_state_matrices/7)
 
+    new_state_matrices = np.array([transition[2].flatten() for transition in training_batch])
+    new_qs_list = self.target_model.predict(new_state_matrices / 7)
+
     x_train = []
     y_train = []
 
@@ -52,7 +62,7 @@ def train(self, is_final):
         if done:   # if this transition is from end_of_round
             new_q = reward
         else:
-            max_new_q = np.max(self.target_model.predict(np.asarray([new_state_matrix.flatten()])))
+            max_new_q = np.max(new_qs_list[index])
             new_q = reward + utils.DISCOUNT * max_new_q
 
         old_qs = old_qs_list[index]

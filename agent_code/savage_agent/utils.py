@@ -1,11 +1,12 @@
 import tensorflow as tf
 import os
 import events
+from settings import ROWS, COLS
 
 ACTION_NUM = 6
 TRANSITION_MAX_LEN = 1000
 MIN_TRAINING_SIZE = 500
-TRAINING_BATCH_SIZE = 32
+TRAINING_BATCH_SIZE = 64
 UPDATE_ROUNDS_NUM = 5
 DISCOUNT = 0.99
 EPSILON_DECAY = 0.99888
@@ -31,14 +32,21 @@ index2action = {
     5: 'WAIT'
 }
 
+INVALID_ACTION = "INVALID_ACTION"
+
 game_rewards_table = {
-        events.COIN_COLLECTED: 40,
-        events.KILLED_OPPONENT: 150,
-        events.GOT_KILLED: -100,
-        events.KILLED_SELF: -150,
-        events.CRATE_DESTROYED: 1,
+        events.COIN_COLLECTED: 60,
+        events.KILLED_OPPONENT: 300,
+        events.GOT_KILLED: -400,
+        events.KILLED_SELF: -200,
+        events.CRATE_DESTROYED: 2,
         # events.SURVIVED_ROUND: 1,
-        events.OPPONENT_ELIMINATED: 5
+        events.OPPONENT_ELIMINATED: 5,
+        events.MOVED_UP: -1,
+        events.MOVED_DOWN: -1,
+        events.MOVED_LEFT: -1,
+        events.MOVED_RIGHT: -1,
+        INVALID_ACTION: -3
     }
 
 
@@ -64,6 +72,12 @@ def get_possible_actions(state_matrix, player_position, bomb_left):
     if state_matrix[(x+1, y)] == 4:
         possible_actions.append("RIGHT")
     return possible_actions
+
+
+def detect_invalid_action(state_matrix, player_position, bomb_left, action):
+    possible_actions = get_possible_actions(state_matrix, player_position, bomb_left)
+    if action not in possible_actions:
+        return True
 
 
 def get_state_matrix(state):
@@ -148,7 +162,7 @@ class ModifiedTensorBoard(tf.keras.callbacks.TensorBoard):
 
 def create_model():
     model = tf.keras.models.Sequential([
-        tf.keras.Input(shape=289),
+        tf.keras.Input(shape=ROWS*COLS),
         tf.keras.layers.Dense(128, activation='relu'),
         tf.keras.layers.Reshape((1, 128)),
         tf.keras.layers.SimpleRNN(16, return_sequences=True),
