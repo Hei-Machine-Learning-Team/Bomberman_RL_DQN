@@ -23,7 +23,7 @@ def act(self, game_state: dict) -> str:
         # chose actions randomly
         action = np.random.choice(possible_actions)
     else:
-        for idx in np.sort(self.model.predict(state_matrix.flatten()))[::-1]:
+        for idx in np.sort(self.model.predict(state_matrix.flatten()/7))[::-1]:
             if utils.index2action[idx] in possible_actions:
                 action = utils.index2action[idx]
                 break
