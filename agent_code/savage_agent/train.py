@@ -6,6 +6,7 @@ import random
 import numpy as np
 from settings import COLS, ROWS
 
+
 def setup_training(self):
     self.model = utils.create_model()  # 非training 模式下需要变通
     self.target_model = utils.create_model()
@@ -33,6 +34,9 @@ def update_transitions(self, old_game_state, self_action, new_game_state, events
     if old_game_state is None or self_action is None:
         return
     reward = utils.reward_from_events(events)
+    # print("reward:", reward)
+    # if reward == -1:
+    #     print(events)
     old_state_matrix = utils.get_state_matrix(old_game_state)
     # detect if the agent has performed invalid action
     if utils.detect_invalid_action(old_state_matrix, old_game_state['self'][3], old_game_state['self'][2], self_action):
@@ -73,22 +77,22 @@ def train(self, is_final):
         x_train.append(old_state_matrix.flatten())
         y_train.append(old_qs)
 
-    # if is_final:
-    #     self.model.fit(np.array(x_train), np.array(y_train), batch_size=utils.TRAINING_BATCH_SIZE,
-    #                    verbose=0, shuffle=False, callbacks=[self.tensorboard])
-    # else:
-    #     self.model.fit(np.array(x_train), np.array(y_train), batch_size=utils.TRAINING_BATCH_SIZE,
-    #                    verbose=0, shuffle=False)
+    callbacks = []
+    if is_final:
+        callbacks.append(self.tensorboard)
+    if self.round_num % utils.CHECKPOINT_ROUNDS_NUM == 0:
+        callbacks.append(utils.cp_callbacks)
 
+    # print("train**********")
+    # print(np.array(x_train)/7, np.array(y_train))
     self.model.fit(np.array(x_train)/7, np.array(y_train), batch_size=utils.TRAINING_BATCH_SIZE,
-                   verbose=0, shuffle=False)
+                   verbose=0, shuffle=False, callbacks=callbacks)
 
     if is_final:
         self.round_num += 1
 
-        if self.round_num > utils.UPDATE_ROUNDS_NUM:
+        if self.round_num % utils.UPDATE_ROUNDS_NUM == 0:
             self.target_model.set_weights(self.model.get_weights())
-            self.round_num = 0
 
         if self.epsilon > utils.MIN_EPSILON:
             self.epsilon *= utils.EPSILON_DECAY

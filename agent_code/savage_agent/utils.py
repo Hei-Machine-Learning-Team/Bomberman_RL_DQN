@@ -7,12 +7,18 @@ ACTION_NUM = 6
 TRANSITION_MAX_LEN = 1000
 MIN_TRAINING_SIZE = 500
 TRAINING_BATCH_SIZE = 64
-UPDATE_ROUNDS_NUM = 5
+UPDATE_ROUNDS_NUM = 10
+CHECKPOINT_ROUNDS_NUM = 200
 DISCOUNT = 0.99
 EPSILON_DECAY = 0.99888
 MIN_EPSILON = 0.0001
 
+
 MODEL_NAME = "savage-RNN"
+
+check_point_save_path = "./checkpoint/rnn.ckpt"
+cp_callbacks = tf.keras.callbacks.ModelCheckpoint(filepath=check_point_save_path,
+                                                  save_weights_only=True)
 
 ACTION_SPACE = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
 action2index = {
@@ -46,6 +52,7 @@ game_rewards_table = {
         events.MOVED_DOWN: -1,
         events.MOVED_LEFT: -1,
         events.MOVED_RIGHT: -1,
+        events.WAITED: -1,
         INVALID_ACTION: -3
     }
 
