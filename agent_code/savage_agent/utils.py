@@ -7,8 +7,8 @@ TRANSITION_MAX_LEN = 1000
 MIN_TRAINING_SIZE = 500
 TRAINING_BATCH_SIZE = 32
 UPDATE_ROUNDS_NUM = 5
-DISCOUNT = 0.9
-EPSILON_DECAY = 0.9975
+DISCOUNT = 0.99
+EPSILON_DECAY = 0.99888
 MIN_EPSILON = 0.0001
 
 MODEL_NAME = "savage-RNN"
@@ -32,12 +32,12 @@ index2action = {
 }
 
 game_rewards_table = {
-        events.COIN_COLLECTED: 10,
-        events.KILLED_OPPONENT: 50,
-        events.GOT_KILLED: -50,
-        events.KILLED_SELF: -60,
+        events.COIN_COLLECTED: 40,
+        events.KILLED_OPPONENT: 150,
+        events.GOT_KILLED: -100,
+        events.KILLED_SELF: -150,
         events.CRATE_DESTROYED: 1,
-        events.SURVIVED_ROUND: 2,
+        events.SURVIVED_ROUND: 1,
         events.OPPONENT_ELIMINATED: 5
     }
 
@@ -149,11 +149,11 @@ class ModifiedTensorBoard(tf.keras.callbacks.TensorBoard):
 def create_model():
     model = tf.keras.models.Sequential([
         tf.keras.Input(shape=289),
-        tf.keras.layers.Dense(200),
+        tf.keras.layers.Dense(150),
         tf.keras.layers.Reshape((1, 200)),
-        tf.keras.layers.SimpleRNN(120, return_sequences=True),
+        tf.keras.layers.SimpleRNN(20, return_sequences=True),
         tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.SimpleRNN(120, return_sequences=False),
+        tf.keras.layers.SimpleRNN(10, return_sequences=False),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(ACTION_NUM, activation='linear')
     ])
