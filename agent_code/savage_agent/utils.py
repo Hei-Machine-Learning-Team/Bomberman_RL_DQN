@@ -2,16 +2,17 @@ import tensorflow as tf
 import os
 import events
 from settings import ROWS, COLS
+import time
 
 ACTION_NUM = 6
 TRANSITION_MAX_LEN = 1000
-MIN_TRAINING_SIZE = 500
+MIN_TRAINING_SIZE = 800
 TRAINING_BATCH_SIZE = 64
 UPDATE_ROUNDS_NUM = 10
-CHECKPOINT_ROUNDS_NUM = 100
+CHECKPOINT_ROUNDS_NUM = 130
 AGGREGATE_STATS_EVERY = 10
 DISCOUNT = 0.99
-EPSILON_DECAY = 0.9988
+EPSILON_DECAY = 0.99976
 MIN_EPSILON = 0.0001
 
 
@@ -19,8 +20,8 @@ MODEL_NAME = "savage-RNN"
 
 IMITATE = False
 CONTINUE_CKPT = False
-check_point_save_path = "./checkpoint/rnn.ckpt"
-cp_callbacks = tf.keras.callbacks.ModelCheckpoint(filepath=check_point_save_path,
+check_point_save_path = "./checkpoints/rnn.ckpt"
+cp_callbacks = tf.keras.callbacks.ModelCheckpoint(filepath=f"./checkpoints/{MODEL_NAME}-{int(time.time())}/rnnckpt",
                                                   save_weights_only=True)
 
 ACTION_SPACE = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'BOMB', 'WAIT']
@@ -51,11 +52,11 @@ game_rewards_table = {
         events.CRATE_DESTROYED: 2,
         # events.SURVIVED_ROUND: 1,
         events.OPPONENT_ELIMINATED: 5,
-        events.MOVED_UP: -1,
-        events.MOVED_DOWN: -1,
-        events.MOVED_LEFT: -1,
-        events.MOVED_RIGHT: -1,
-        events.WAITED: -1,
+        # events.MOVED_UP: -1,
+        # events.MOVED_DOWN: -1,
+        # events.MOVED_LEFT: -1,
+        # events.MOVED_RIGHT: -1,
+        # events.WAITED: -1,
         INVALID_ACTION: -3
     }
 
