@@ -3,12 +3,13 @@ import os
 import events
 from settings import ROWS, COLS
 import time
+import numpy as np
 
 ACTION_NUM = 6
 TRANSITION_MAX_LEN = 1000
 MIN_TRAINING_SIZE = 800
 TRAINING_BATCH_SIZE = 64
-UPDATE_ROUNDS_NUM = 10
+UPDATE_ROUNDS_NUM = 20
 CHECKPOINT_ROUNDS_NUM = 130
 AGGREGATE_STATS_EVERY = 10
 DISCOUNT = 0.99
@@ -19,7 +20,7 @@ MIN_EPSILON = 0.0001
 MODEL_NAME = "savage-RNN"
 
 IMITATE = False
-CONTINUE_CKPT = False
+CONTINUE_CKPT = True
 check_point_save_path = "./checkpoints/rnn.ckpt"
 cp_callbacks = tf.keras.callbacks.ModelCheckpoint(filepath=f"./checkpoints/{MODEL_NAME}-{int(time.time())}/rnnckpt",
                                                   save_weights_only=True)
@@ -85,10 +86,21 @@ def get_possible_actions(state_matrix, player_position, bomb_left):
     return possible_actions
 
 
-def detect_invalid_action(state_matrix, player_position, bomb_left, action):
-    possible_actions = get_possible_actions(state_matrix, player_position, bomb_left)
-    if action not in possible_actions:
-        return True
+# def detect_invalid_action(state_matrix, player_position, bomb_left, action):
+#     possible_actions = get_possible_actions(state_matrix, player_position, bomb_left)
+#     if action not in possible_actions:
+#         return True
+
+def detect_invalid_action(old_state, new_state, action):
+    if new_state is None:
+        return False
+    if action == "BOMB":
+        bomb_left = old_state['self'][2]
+        return not bomb_left  # bomb_left true -> valid;  bomb_left false -> invalid
+    if action in ["UP", "DOWN", "LEFT", "RIGHT"]:
+        old_position = old_state['self'][3]
+        new_position = new_state['self'][3]
+        return new_position == old_position  # if the agent didn't move, it's a invalid action
 
 
 def get_state_matrix(state):
@@ -102,7 +114,7 @@ def get_state_matrix(state):
         return None
     player_position = state['self'][3]
     enemy_positions = [player_state[3] for player_state in state['others']]
-    field = state['field']
+    field = np.copy(state['field'])
     bomb_positions = [bomb_state[0] for bomb_state in state['bombs']]
     coin_positions = [coin_pos for coin_pos in state['coins']]
     explosion = state['explosion_map']

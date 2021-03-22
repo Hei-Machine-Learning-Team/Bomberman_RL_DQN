@@ -15,7 +15,7 @@ def setup_training(self):
     self.ep_rewards = []
     self.round_reward = 0
     self.round_num = 0
-    self.epsilon = 1
+    self.epsilon = 0.3
 
 
 def game_events_occurred(self, old_game_state, self_action, new_game_state, events):
@@ -32,6 +32,8 @@ def end_of_round(self, last_game_state, last_action, events):
         min_reward = min(self.ep_rewards[-utils.AGGREGATE_STATS_EVERY:])
         max_reward = max(self.ep_rewards[-utils.AGGREGATE_STATS_EVERY:])
         self.tensorboard.update_stats(reward_avg=avg_reward, reward_min=min_reward, max_reward=max_reward, epsilon=self.epsilon)
+        if len(self.ep_rewards) > 10000:
+            self.ep_rewards = []
     train(self, is_final=True)
     # if e.KILLED_SELF in events or e.GOT_KILLED in eveNnts:
     #     print("*************************************************")
@@ -49,7 +51,7 @@ def update_transitions(self, old_game_state, self_action, new_game_state, events
     #     print(events)
     old_state_matrix = utils.get_state_matrix(old_game_state)
     # detect if the agent has performed invalid action
-    if utils.detect_invalid_action(old_state_matrix, old_game_state['self'][3], old_game_state['self'][2], self_action):
+    if utils.detect_invalid_action(old_game_state, new_game_state, self_action):
         events.append(utils.INVALID_ACTION)
     # if this transition is from the end of a round
     if done or new_game_state is None:

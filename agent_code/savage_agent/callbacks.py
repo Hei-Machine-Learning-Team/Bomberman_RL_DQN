@@ -19,9 +19,10 @@ def setup(self):
     if self.train:  # on the training mode
         self.model = utils.create_model()
         if utils.CONTINUE_CKPT:  # load model from checkpoint
-            if os.path.exists(utils.check_point_save_path + '.index'):
+            if os.path.exists("./checkpoints/savage-RNN-1616355768/rnnckpt" + '.index'):
                 print('-------------load the model-----------------')
-                self.model.load_weights(utils.check_point_save_path)
+                self.model.load_weights("./checkpoints/savage-RNN-1616355768/rnnckpt")
+                print("*******************model loaded***************************")
     else:
         self.model = tf.keras.models.load_model('./RNNModel')
         print(self.model.summary())
@@ -53,12 +54,13 @@ def act(self, game_state: dict) -> str:
             return np.random.choice(utils.ACTION_SPACE)
     # chose actions based on q values
     state_matrix = utils.get_state_matrix(game_state)
-    # print(state_matrix)
+    print(game_state)
+    print(state_matrix)
     # print(self.model.predict(np.array([state_matrix.flatten()/7])))
     act_idx = np.argmax(self.model.predict(np.array([state_matrix.flatten()/7])))
     # print(act_idx)
     action = utils.ACTION_SPACE[act_idx]
-    # print(action)
+    print(action)
     return action
 
 
