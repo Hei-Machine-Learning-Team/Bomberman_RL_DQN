@@ -15,7 +15,7 @@ def setup_training(self):
     self.ep_rewards = []
     self.round_reward = 0
     self.round_num = 0
-    self.epsilon = 0.3
+    self.epsilon = 1
 
 
 def game_events_occurred(self, old_game_state, self_action, new_game_state, events):
@@ -53,9 +53,10 @@ def update_transitions(self, old_game_state, self_action, new_game_state, events
     # detect if the agent has performed invalid action
     if utils.detect_invalid_action(old_game_state, new_game_state, self_action):
         events.append(utils.INVALID_ACTION)
+        # print(self_action, "is a invalid function")
     # if this transition is from the end of a round
     if done or new_game_state is None:
-        new_state_matrix = np.zeros((COLS, ROWS))
+        new_state_matrix = np.zeros(COLS*ROWS*5)
     else:
         new_state_matrix = utils.get_state_matrix(new_game_state)
     self.transitions.append((old_state_matrix, self_action, new_state_matrix, reward, done))
@@ -66,10 +67,10 @@ def train(self, is_final):
         return
     training_batch = random.sample(self.transitions, utils.TRAINING_BATCH_SIZE)
     old_state_matrices = np.array([transition[0].flatten() for transition in training_batch])
-    old_qs_list = self.model.predict(old_state_matrices/7)
+    old_qs_list = self.model.predict(old_state_matrices)
 
     new_state_matrices = np.array([transition[2].flatten() for transition in training_batch])
-    new_qs_list = self.target_model.predict(new_state_matrices / 7)
+    new_qs_list = self.target_model.predict(new_state_matrices)
 
     x_train = []
     y_train = []
@@ -99,7 +100,7 @@ def train(self, is_final):
 
     # print("train**********")
     # print(np.array(x_train)/7, np.array(y_train))
-    self.model.fit(np.array(x_train)/7, np.array(y_train), batch_size=utils.TRAINING_BATCH_SIZE,
+    self.model.fit(np.array(x_train), np.array(y_train), batch_size=utils.TRAINING_BATCH_SIZE,
                    verbose=0, shuffle=False, callbacks=callbacks)
 
     if is_final:

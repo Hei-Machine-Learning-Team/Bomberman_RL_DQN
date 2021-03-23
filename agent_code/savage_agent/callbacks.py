@@ -46,21 +46,23 @@ def setup(self):
 
 def act(self, game_state: dict) -> str:
     # print("act called")
+    # print(utils.get_state_matrix(game_state).reshape((5, 17, 17))[1])
+    # print(utils.get_state_matrix(game_state).reshape((5, 17, 17))[4])
     if utils.IMITATE:
         return imitate_act(self, game_state)
     if self.train:
         if np.random.random() <= self.epsilon:
             # chose actions randomly
-            return np.random.choice(utils.ACTION_SPACE)
+            # return np.random.choice(utils.ACTION_SPACE)
+            return np.random.choice(['UP', 'DOWN', 'LEFT', 'RIGHT', 'WAIT', 'BOMB'], p=[.22, .22, .22, .22, .07, .05])
     # chose actions based on q values
     state_matrix = utils.get_state_matrix(game_state)
-    print(game_state)
-    print(state_matrix)
+    # print(game_state)
     # print(self.model.predict(np.array([state_matrix.flatten()/7])))
-    act_idx = np.argmax(self.model.predict(np.array([state_matrix.flatten()/7])))
+    act_idx = np.argmax(self.model.predict(np.array([state_matrix.flatten()])))
     # print(act_idx)
     action = utils.ACTION_SPACE[act_idx]
-    print(action)
+    # print(action)
     return action
 
 
