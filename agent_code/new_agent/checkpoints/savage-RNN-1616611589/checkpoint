@@ -1,0 +1,2 @@
+model_checkpoint_path: "rnnckpt"
+all_model_checkpoint_paths: "rnnckpt"
