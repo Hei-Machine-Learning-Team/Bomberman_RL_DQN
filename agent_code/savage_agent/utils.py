@@ -4,11 +4,12 @@ import events
 from settings import ROWS, COLS
 import time
 
+MATRIX_STATE_N = 11
 ACTION_NUM = 6
 TRANSITION_MAX_LEN = 1000
 MIN_TRAINING_SIZE = 800
 TRAINING_BATCH_SIZE = 64
-UPDATE_ROUNDS_NUM = 10
+UPDATE_ROUNDS_NUM = 32
 CHECKPOINT_ROUNDS_NUM = 130
 AGGREGATE_STATS_EVERY = 10
 DISCOUNT = 0.99
@@ -18,8 +19,8 @@ MIN_EPSILON = 0.0001
 
 MODEL_NAME = "savage-RNN"
 
-IMITATE = False
-CONTINUE_CKPT = False
+IMITATE = True
+CONTINUE_CKPT = True
 check_point_save_path = "./checkpoints/rnn.ckpt"
 cp_callbacks = tf.keras.callbacks.ModelCheckpoint(filepath=f"./checkpoints/{MODEL_NAME}-{int(time.time())}/rnnckpt",
                                                   save_weights_only=True)
@@ -49,9 +50,9 @@ game_rewards_table = {
         events.KILLED_OPPONENT: 500,
         events.GOT_KILLED: -400,
         events.KILLED_SELF: -200,
-        events.CRATE_DESTROYED: 2,
-        # events.SURVIVED_ROUND: 1,
-        events.OPPONENT_ELIMINATED: 5,
+        events.CRATE_DESTROYED: 30,
+        events.SURVIVED_ROUND: 300,
+        events.OPPONENT_ELIMINATED: 20,
         # events.MOVED_UP: -1,
         # events.MOVED_DOWN: -1,
         # events.MOVED_LEFT: -1,
@@ -71,41 +72,95 @@ def reward_from_events(event_list):
 
 def get_possible_actions(state_matrix, player_position, bomb_left):
     possible_actions = ['WAIT']
+    # can drop a bomb
     if bomb_left:
         possible_actions.append("BOMB")
     x, y = player_position
-    if state_matrix[(x, y-1)] == 4:
+    # the player can move to tiles and coins
+    if state_matrix[(x, y-1)] in [4, 5]:
         possible_actions.append("UP")
-    if state_matrix[(x, y+1)] == 4:
+    if state_matrix[(x, y+1)] in [4, 5]:
         possible_actions.append("DOWN")
-    if state_matrix[(x-1, y)] == 4:
+    if state_matrix[(x-1, y)] in [4, 5]:
         possible_actions.append("LEFT")
-    if state_matrix[(x+1, y)] == 4:
+    if state_matrix[(x+1, y)] in [4, 5]:
         possible_actions.append("RIGHT")
     return possible_actions
 
 
-def detect_invalid_action(state_matrix, player_position, bomb_left, action):
-    possible_actions = get_possible_actions(state_matrix, player_position, bomb_left)
-    if action not in possible_actions:
-        return True
+# def detect_invalid_action(state_matrix, player_position, bomb_left, action):
+#     possible_actions = get_possible_actions(state_matrix, player_position, bomb_left)
+#     if action not in possible_actions:
+#         return True
 
+
+def detect_invalid_action(old_state, new_state, action):
+    if action == "WAIT":
+        return False
+    if new_state is None:
+        return False
+    if action == "BOMB":
+        bomb_left = old_state['self'][2]
+        return not bomb_left  # bomb_left true -> valid;  bomb_left false -> invalid
+    if action in ["UP", "DOWN", "LEFT", "RIGHT"]:
+        old_position = old_state['self'][3]
+        new_position = new_state['self'][3]
+        return new_position == old_position  # if the agent didn't move, it's a invalid action
+
+
+# def get_state_matrix(state):
+#     """
+#     Represent the state using a single matrix.
+#     In this matrix,
+#     0 -> player,  1 -> enemies,  2 -> crates,  3 -> walls
+#     4 -> tiles,   5 -> bombs,    6 -> coins,   7 -> explosion
+#     """
+#     if state is None:
+#         return None
+#     player_position = state['self'][3]
+#     enemy_positions = [player_state[3] for player_state in state['others']]
+#     field = state['field']
+#     bomb_positions = [bomb_state[0] for bomb_state in state['bombs']]
+#     coin_positions = [coin_pos for coin_pos in state['coins']]
+#     explosion = state['explosion_map']
+#     for i in range(field.shape[0]):
+#         for j in range(field.shape[1]):
+#             if field[i][j] == -1:  # walls
+#                 field[i][j] = 3
+#                 continue
+#             elif field[i][j] == 0:  # tiles
+#                 field[i][j] = 4
+#             elif field[i][j] == 1:  # crates
+#                 field[i][j] = 2
+#             if explosion[i][j] > 0:  # explosion
+#                 field[i][j] = 7
+#     field[player_position] = 0
+#     for pos in enemy_positions:
+#         field[pos] = 1
+#     for pos in bomb_positions:
+#         field[pos] = 5
+#     for pos in coin_positions:
+#         field[pos] = 6
+#     return field
 
 def get_state_matrix(state):
     """
     Represent the state using a single matrix.
     In this matrix,
     0 -> player,  1 -> enemies,  2 -> crates,  3 -> walls
-    4 -> tiles,   5 -> bombs,    6 -> coins,   7 -> explosion
+    4 -> tiles,   5 -> coins,    6 + timer -> bombs,   10 + timer -> explosion
     """
     if state is None:
         return None
     player_position = state['self'][3]
     enemy_positions = [player_state[3] for player_state in state['others']]
     field = state['field']
-    bomb_positions = [bomb_state[0] for bomb_state in state['bombs']]
+    bomb_states = [bomb_state for bomb_state in state['bombs']]
     coin_positions = [coin_pos for coin_pos in state['coins']]
     explosion = state['explosion_map']
+    # denote coins in the matrix first
+    for pos in coin_positions:
+        field[pos] = 5
     for i in range(field.shape[0]):
         for j in range(field.shape[1]):
             if field[i][j] == -1:  # walls
@@ -116,14 +171,12 @@ def get_state_matrix(state):
             elif field[i][j] == 1:  # crates
                 field[i][j] = 2
             if explosion[i][j] > 0:  # explosion
-                field[i][j] = 7
+                field[i][j] = 9 - explosion[i][j]  # 10 + timer
     field[player_position] = 0
     for pos in enemy_positions:
         field[pos] = 1
-    for pos in bomb_positions:
-        field[pos] = 5
-    for pos in coin_positions:
-        field[pos] = 6
+    for pos, timer in bomb_states:
+        field[pos] = 8 - timer
     return field
 
 
@@ -170,18 +223,52 @@ class ModifiedTensorBoard(tf.keras.callbacks.TensorBoard):
                 self.writer.flush()
 
 
+# def create_model():
+#     model = tf.keras.models.Sequential([
+#         tf.keras.Input(shape=ROWS*COLS),
+#         tf.keras.layers.Dense(128, activation='relu'),
+#         tf.keras.layers.Reshape((1, 128)),
+#         tf.keras.layers.SimpleRNN(16, return_sequences=True),
+#         tf.keras.layers.Dropout(0.2),
+#         tf.keras.layers.SimpleRNN(8, return_sequences=False),
+#         tf.keras.layers.Dropout(0.2),
+#         tf.keras.layers.Dense(ACTION_NUM, activation='linear')
+#     ])
+#     model.compile(loss='mse', optimizer=tf.keras.optimizers.Adam(lr=0.001), metrics=['accuracy'])
+#     return model
+
+
+# def create_model():
+#     model = tf.keras.models.Sequential([
+#         tf.keras.Input(shape=ROWS*COLS),
+#         tf.keras.layers.Dense(256, activation='relu'),
+#         tf.keras.layers.Dense(128, activation='relu'),
+#         tf.keras.layers.Dense(len(ACTION_SPACE), activation='linear')
+#     ])
+#     model.compile(loss='mse', optimizer=tf.keras.optimizers.Adam(lr=0.001), metrics=['accuracy'])
+#     return model
+
+
 def create_model():
     model = tf.keras.models.Sequential([
-        tf.keras.Input(shape=ROWS*COLS),
+        tf.keras.layers.Input(shape=(17, 17)),
+        tf.keras.layers.Reshape((17, 17, 1)),
+        tf.keras.layers.Conv2D(256, (3, 3), input_shape=(17, 17)),
+        tf.keras.layers.Activation('relu'),
+        tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Conv2D(256, (3, 3)),
+        tf.keras.layers.Activation('relu'),
+        tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(128, activation='relu'),
         tf.keras.layers.Reshape((1, 128)),
-        tf.keras.layers.SimpleRNN(16, return_sequences=True),
+        tf.keras.layers.LSTM(32, return_sequences=True),
         tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.SimpleRNN(8, return_sequences=False),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Dense(ACTION_NUM, activation='linear')
+        tf.keras.layers.LSTM(32),
+        # tf.keras.layers.Dense(128, activation='relu'),
+        tf.keras.layers.Dense(len(ACTION_SPACE), activation='linear')
     ])
     model.compile(loss='mse', optimizer=tf.keras.optimizers.Adam(lr=0.001), metrics=['accuracy'])
     return model
-
-

@@ -32,6 +32,8 @@ def end_of_round(self, last_game_state, last_action, events):
         min_reward = min(self.ep_rewards[-utils.AGGREGATE_STATS_EVERY:])
         max_reward = max(self.ep_rewards[-utils.AGGREGATE_STATS_EVERY:])
         self.tensorboard.update_stats(reward_avg=avg_reward, reward_min=min_reward, max_reward=max_reward, epsilon=self.epsilon)
+        if len(self.ep_rewards) > 10000:   # save some memory
+            self.ep_rewards = []
     train(self, is_final=True)
     # if e.KILLED_SELF in events or e.GOT_KILLED in eveNnts:
     #     print("*************************************************")
@@ -49,7 +51,7 @@ def update_transitions(self, old_game_state, self_action, new_game_state, events
     #     print(events)
     old_state_matrix = utils.get_state_matrix(old_game_state)
     # detect if the agent has performed invalid action
-    if utils.detect_invalid_action(old_state_matrix, old_game_state['self'][3], old_game_state['self'][2], self_action):
+    if utils.detect_invalid_action(old_game_state, new_game_state, self_action):
         events.append(utils.INVALID_ACTION)
     # if this transition is from the end of a round
     if done or new_game_state is None:
@@ -63,11 +65,11 @@ def train(self, is_final):
     if len(self.transitions) < utils.MIN_TRAINING_SIZE:
         return
     training_batch = random.sample(self.transitions, utils.TRAINING_BATCH_SIZE)
-    old_state_matrices = np.array([transition[0].flatten() for transition in training_batch])
-    old_qs_list = self.model.predict(old_state_matrices/7)
+    old_state_matrices = np.array([transition[0] for transition in training_batch])
+    old_qs_list = self.model.predict(old_state_matrices/utils.MATRIX_STATE_N)
 
-    new_state_matrices = np.array([transition[2].flatten() for transition in training_batch])
-    new_qs_list = self.target_model.predict(new_state_matrices / 7)
+    new_state_matrices = np.array([transition[2] for transition in training_batch])
+    new_qs_list = self.target_model.predict(new_state_matrices / utils.MATRIX_STATE_N)
 
     x_train = []
     y_train = []
@@ -84,7 +86,7 @@ def train(self, is_final):
         act_idx = utils.action2index[action]
         old_qs[act_idx] = new_q
 
-        x_train.append(old_state_matrix.flatten())
+        x_train.append(old_state_matrix)
         y_train.append(old_qs)
 
     callbacks = []
@@ -97,7 +99,7 @@ def train(self, is_final):
 
     # print("train**********")
     # print(np.array(x_train)/7, np.array(y_train))
-    self.model.fit(np.array(x_train)/7, np.array(y_train), batch_size=utils.TRAINING_BATCH_SIZE,
+    self.model.fit(np.array(x_train)/utils.MATRIX_STATE_N, np.array(y_train), batch_size=utils.TRAINING_BATCH_SIZE,
                    verbose=0, shuffle=False, callbacks=callbacks)
 
     if is_final:
