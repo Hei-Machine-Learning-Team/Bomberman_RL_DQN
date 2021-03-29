@@ -11,11 +11,11 @@ def setup_training(self):
     self.target_model = utils.create_model()
     self.target_model.set_weights(self.model.get_weights())
     self.transitions = deque(maxlen=utils.TRANSITION_MAX_LEN)
-    #self.tensorboard = utils.ModifiedTensorBoard(log_dir=f"logs/{utils.MODEL_NAME}-{int(time.time())}")
+    self.tensorboard = utils.ModifiedTensorBoard(log_dir=f"logs/{utils.MODEL_NAME}-{int(time.time())}")
     self.ep_rewards = []
     self.round_reward = 0
     self.round_num = 0
-    self.epsilon = 1
+    self.epsilon = 0.8
 
 
 def game_events_occurred(self, old_game_state, self_action, new_game_state, events):
@@ -44,22 +44,34 @@ def end_of_round(self, last_game_state, last_action, events):
 def update_transitions(self, old_game_state, self_action, new_game_state, events, done):
     if old_game_state is None or self_action is None:
         return
-    reward = utils.reward_from_events(events)
-    self.round_reward += reward
-    # print("reward:", reward)
-    # if reward == -1:
-    #     print(events)
+
     old_state_matrix = utils.get_state_matrix(old_game_state)
     # detect if the agent has performed invalid action
+    #print(self_action)
     if utils.detect_invalid_action(old_game_state, new_game_state, self_action):
         events.append(utils.INVALID_ACTION)
-        # print(self_action, "is a invalid function")
+        #print(self_action, "is a invalid function")
+
+    reward = utils.reward_from_events(events)
+    # if reward == -10:
+    #     print(events)
+    self.round_reward += reward
+    # print("reward:", self.round_reward)
+
+
     # if this transition is from the end of a round
-    if done or new_game_state is None:
+    # if done or new_game_state is None:
+    #     new_state_matrix = np.zeros([COLS,ROWS,5])
+    # else:
+    #     new_state_matrix = utils.get_state_matrix(new_game_state)
+    # self.transitions.append((old_state_matrix, self_action, new_state_matrix, reward, done))
+
+    if new_game_state is None:
         new_state_matrix = np.zeros([COLS,ROWS,5])
     else:
         new_state_matrix = utils.get_state_matrix(new_game_state)
     self.transitions.append((old_state_matrix, self_action, new_state_matrix, reward, done))
+
 
 
 def train(self, is_final):
@@ -92,17 +104,16 @@ def train(self, is_final):
 
     callbacks = []
     if is_final:
-        return
-        #callbacks.append(self.tensorboard)
+        callbacks.append(self.tensorboard)
     if self.round_num % utils.CHECKPOINT_ROUNDS_NUM == 0:
         callbacks.append(utils.cp_callbacks)
         # if self.round_num != 0:
-        #     self.model.save(f'./models/RNN-{int(time.time())}')
+        #     self.model.save(f'./models/RNN-{int(time.time())}'+'.h5')
 
     # print("train**********")
     # print(np.array(x_train)/7, np.array(y_train))
     self.model.fit(np.array(x_train), np.array(y_train), batch_size=utils.TRAINING_BATCH_SIZE,
-                   verbose=0, shuffle=False, callbacks=callbacks)
+                   verbose=0, shuffle=False)#, callbacks=callbacks)
 
     if is_final:
         self.round_num += 1
@@ -113,3 +124,4 @@ def train(self, is_final):
         if self.epsilon > utils.MIN_EPSILON:
             self.epsilon *= utils.EPSILON_DECAY
             self.epsilon = max(utils.MIN_EPSILON, self.epsilon)
+
